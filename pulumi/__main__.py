@@ -109,13 +109,10 @@ ipfs_security_group = aws.ec2.SecurityGroup(f"{tag_prefix}-sg",
     })
 
 # --- 3. Generate a new SSH key pair with the 'tls' provider ---
-# This is a robust way to create a key pair within Pulumi code.
-# The private key will be saved as an output.
 key_pair = tls.PrivateKey("ipfs-key",
     algorithm="RSA")
 
 # --- 4. Use the generated public key to create the EC2 KeyPair resource in AWS ---
-# This associates the public key with your AWS account for EC2 instances.
 ipfs_key_pair = aws.ec2.KeyPair(f"{tag_prefix}-key",
     key_name=f"{tag_prefix}-key",
     public_key=key_pair.public_key_openssh,
@@ -138,23 +135,29 @@ except Exception as e:
     raise e
 
 # --- 6. Define User Data for EC2 Instance ---
+# The script is now more robust and runs ipfs init as the correct user.
 user_data_script = f"""#!/bin/bash
 sudo apt update -y
 sudo apt install -y curl unzip
 
+# Install IPFS Kubo
 IPFS_VERSION="v0.29.0"
 wget https://dist.ipfs.io/kubo/${{IPFS_VERSION}}/kubo_${{IPFS_VERSION}}_linux-amd64.tar.gz
 tar -xvzf kubo_${{IPFS_VERSION}}_linux-amd64.tar.gz
 cd kubo
 sudo bash install.sh
 
-ipfs init
-ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001
-ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
-ipfs config --json Swarm.EnableRelayHop true
-ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Origin '["*"]'
-ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST"]'
+# Run ipfs init as the 'ubuntu' user to create the repository in the correct location
+su - ubuntu -c 'ipfs init'
 
+# Configure IPFS for public access and API/Gateway bindings
+su - ubuntu -c 'ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001'
+su - ubuntu -c 'ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080'
+su - ubuntu -c 'ipfs config --json Swarm.EnableRelayHop true'
+su - ubuntu -c 'ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Origin '["*"]''
+su - ubuntu -c 'ipfs config --json Gateway.HTTPHeaders.Access-Control-Allow-Methods '["GET", "POST"]''
+
+# Setup systemd service for IPFS to run automatically as the 'ubuntu' user
 sudo tee /etc/systemd/system/ipfs.service > /dev/null <<EOT
 [Unit]
 Description=IPFS Daemon
@@ -180,7 +183,7 @@ sudo systemctl start ipfs
 ipfs_instance = aws.ec2.Instance(f"{tag_prefix}-instance",
     ami=ami.id,
     instance_type=instance_type,
-    key_name=ipfs_key_pair.key_name, # Use the key pair created as a Pulumi resource
+    key_name=ipfs_key_pair.key_name,
     subnet_id=ipfs_subnet.id,
     vpc_security_group_ids=[ipfs_security_group.id],
     user_data=user_data_script,
@@ -194,8 +197,7 @@ ipfs_instance = aws.ec2.Instance(f"{tag_prefix}-instance",
     })
 
 # --- Outputs ---
-# The private key material is a sensitive output and will be encrypted by Pulumi
-pulumi.export("private_key", key_pair.private_key_pem)
+pulumi.export("private_key", pulumi.Output.secret(key_pair.private_key_pem))
 pulumi.export("ipfs_node_public_ip", ipfs_instance.public_ip)
 pulumi.export("ipfs_key_pair_name", ipfs_key_pair.key_name)
 pulumi.export("ipfs_gateway_url", pulumi.Output.format("http://{}:8080/ipfs/", ipfs_instance.public_ip))
