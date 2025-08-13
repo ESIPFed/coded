@@ -17,6 +17,7 @@ dependencies:
 conda env create -f pulumi_env.yml
 ```
 ## cd into pulumi directory and launch the machine
+```
 conda activate pulumi
 cd pulumi
 pulumi up
