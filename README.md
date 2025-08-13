@@ -9,3 +9,6 @@ This project seek to determine the best approach and performance for backing clo
 * Develop best practices, enhancements and packages as needed
 * Construct real-world test cases
 * Compare performance of distributed storage like IPFS with traditional object storage
+
+## Infrastructure
+* Deploy nodes in several different regions using [Pulumi](pulumi.md) IaC.
