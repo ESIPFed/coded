@@ -22,6 +22,14 @@ conda activate pulumi
 cd pulumi
 pulumi up
 ```
+This should produce outputs like:
+```
+Outputs:
+  + ipfs_gateway_url   : "http://52.42.117.40:8080/ipfs/"
+  + ipfs_key_pair_name : "ipfs-node-pulumi-key"
+  + ipfs_node_public_ip: "52.42.117.40"
+  + private_key        : [secret]
+```
 Get SSH key:
 ```
 pulumi stack output --show-secrets private_key > ~/.ssh/ipfs-node-pulumi-key.pem
