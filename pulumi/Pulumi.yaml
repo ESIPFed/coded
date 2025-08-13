@@ -1,0 +1,11 @@
+name: m5-large
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: /home/rsignell/miniforge3/envs/pulumi
+description: A Python program to deploy a virtual machine on Amazon EC2
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: vm-aws-python

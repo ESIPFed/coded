@@ -1,0 +1,5 @@
+config:
+  aws:region: us-west-2
+  m5-large:instanceType: m5.large
+  m5-large:sshKeyName: ipfs-node-pulumi-key
+  m5-large:vpcNetworkCidr: 10.0.0.0/16
